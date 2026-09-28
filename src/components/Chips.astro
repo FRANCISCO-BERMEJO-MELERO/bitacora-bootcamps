@@ -1,0 +1,14 @@
+---
+import Chip from './Chip.astro';
+
+interface Props {
+	conceptos: string[];
+	etiqueta?: string;
+}
+
+const { conceptos, etiqueta = 'Conceptos' } = Astro.props;
+---
+
+<ul class="flex flex-wrap gap-1.5" aria-label={etiqueta}>
+	{conceptos.map((c) => <Chip texto={c} />)}
+</ul>

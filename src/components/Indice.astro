@@ -1,0 +1,119 @@
+---
+import type { MarkdownHeading } from 'astro';
+
+interface Props {
+	headings: MarkdownHeading[];
+}
+
+const entradas = Astro.props.headings.filter((h) => h.depth === 2 || h.depth === 3);
+---
+
+{
+	entradas.length > 0 && (
+		<>
+			{/* Móvil y tablet: índice plegable antes del artículo. */}
+			<details class="indice-movil rounded-lg border border-rule bg-sheet lg:hidden">
+				<summary class="flex cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-4 py-3 text-sm font-semibold">
+					Índice del apunte
+					<span class="flecha" aria-hidden="true" />
+				</summary>
+				<nav aria-label="Índice del apunte" class="border-t border-rule px-4 pt-2 pb-3">
+					<ol class="space-y-0.5 text-[0.95rem]">
+						{entradas.map((h) => (
+							<li class:list={[h.depth === 3 && 'pl-4']}>
+								<a href={`#${h.slug}`} class="block rounded py-1 text-ink-soft hover:text-ink">
+									{h.text}
+								</a>
+							</li>
+						))}
+					</ol>
+				</nav>
+			</details>
+
+			{/* Escritorio: índice lateral fijo que marca la sección visible. */}
+			<nav aria-label="Índice del apunte" class="indice-lateral hidden lg:block">
+				<p class="mb-3 text-sm font-bold text-ink">En este apunte</p>
+				<ol class="border-l border-rule text-sm leading-snug">
+					{entradas.map((h) => (
+						<li>
+							<a
+								href={`#${h.slug}`}
+								data-indice={h.slug}
+								class:list={[
+									'-ml-px block border-l-2 border-transparent py-1.5 pr-2 text-ink-soft transition-colors hover:text-ink',
+									h.depth === 3 ? 'pl-7' : 'pl-4',
+								]}
+							>
+								{h.text}
+							</a>
+						</li>
+					))}
+				</ol>
+			</nav>
+		</>
+	)
+}
+
+<style>
+	.indice-movil .flecha {
+		width: 0.5em;
+		height: 0.5em;
+		border-right: 2px solid currentColor;
+		border-bottom: 2px solid currentColor;
+		transform: rotate(45deg) translateY(-2px);
+		transition: transform 150ms;
+	}
+
+	.indice-movil[open] .flecha {
+		transform: rotate(-135deg) translateY(-2px);
+	}
+
+	.indice-movil summary::-webkit-details-marker {
+		display: none;
+	}
+
+	.indice-lateral a[aria-current='true'] {
+		border-left-color: var(--accent);
+		color: var(--ink);
+		font-weight: 600;
+	}
+</style>
+
+<script>
+	// Marca en el índice lateral la sección que se está leyendo.
+	const enlaces = new Map(
+		[...document.querySelectorAll<HTMLAnchorElement>('a[data-indice]')].map((a) => [a.dataset.indice!, a]),
+	);
+	const titulos = [...enlaces.keys()]
+		.map((id) => document.getElementById(id))
+		.filter((el): el is HTMLElement => el !== null);
+
+	if (titulos.length > 0) {
+		const visibles = new Set<string>();
+		let actual: string | undefined;
+
+		const marcar = (id: string | undefined) => {
+			if (id === actual) return;
+			if (actual) enlaces.get(actual)?.removeAttribute('aria-current');
+			if (id) enlaces.get(id)?.setAttribute('aria-current', 'true');
+			actual = id;
+		};
+
+		const observador = new IntersectionObserver(
+			(cambios) => {
+				for (const c of cambios) {
+					if (c.isIntersecting) visibles.add(c.target.id);
+					else visibles.delete(c.target.id);
+				}
+				// La sección activa es el primer título visible o, si no hay ninguno,
+				// el último que ha quedado por encima de la ventana.
+				const visible = titulos.find((t) => visibles.has(t.id));
+				const anterior = [...titulos].reverse().find((t) => t.getBoundingClientRect().top < 0);
+				marcar((visible ?? anterior)?.id);
+			},
+			{ rootMargin: '0px 0px -60% 0px' },
+		);
+
+		titulos.forEach((t) => observador.observe(t));
+	}
+</script>

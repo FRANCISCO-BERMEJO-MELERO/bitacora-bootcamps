@@ -1,0 +1,23 @@
+---
+import { ETIQUETAS_ESTADO, type Estado } from '../lib/apuntes';
+
+interface Props {
+	estado: Estado;
+}
+
+const { estado } = Astro.props;
+
+// Forma + color + texto: el estado nunca depende solo del color.
+const estilos: Record<Estado, { color: string; marca: string }> = {
+	'en-curso': { color: 'text-ok', marca: 'rounded-full bg-current' },
+	terminado: { color: 'text-ink-soft', marca: 'rounded-[2px] bg-current' },
+	pausado: { color: 'text-warn', marca: 'rounded-full border-2 border-current' },
+};
+
+const { color, marca } = estilos[estado];
+---
+
+<span class:list={['inline-flex items-center gap-1.5 text-sm font-semibold', color]}>
+	<span class:list={['inline-block size-2', marca]} aria-hidden="true"></span>
+	{ETIQUETAS_ESTADO[estado]}
+</span>

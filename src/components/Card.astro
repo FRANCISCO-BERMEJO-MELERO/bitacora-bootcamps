@@ -1,0 +1,57 @@
+---
+import Chips from './Chips.astro';
+import { dosDigitos, formatearFecha, hrefDe, isoFecha, type Apunte } from '../lib/apuntes';
+
+interface Props {
+	apunte: Apunte;
+	/** Nivel del título dentro de la página. */
+	nivel?: 'h2' | 'h3';
+}
+
+const { apunte, nivel = 'h3' } = Astro.props;
+const { titulo, resumen, fecha, conceptos, orden } = apunte.data;
+const Titulo = nivel;
+---
+
+<article
+	class="entrada group relative grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 rounded-lg border border-rule bg-sheet py-5 pr-5 pl-6 transition-colors hover:border-accent sm:gap-x-6 sm:pl-7"
+>
+	<span
+		class="cifras pt-0.5 text-3xl leading-none font-black tracking-tight text-accent-ink sm:text-4xl"
+		aria-hidden="true">{dosDigitos(orden)}</span
+	>
+	<div class="min-w-0">
+		<Titulo class="text-lg leading-snug font-bold tracking-tight text-balance text-ink sm:text-xl">
+			<a href={hrefDe(apunte)} class="outline-none after:absolute after:inset-0 after:rounded-lg">
+				<span class="sr-only">Apunte {orden}: </span>{titulo}
+			</a>
+		</Titulo>
+		<p class="mt-1.5 max-w-[65ch] font-lectura text-[1.05rem] leading-relaxed text-ink-soft">
+			{resumen}
+		</p>
+		<div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+			<time datetime={isoFecha(fecha)} class="cifras text-sm text-ink-soft">
+				{formatearFecha(fecha)}
+			</time>
+			<Chips conceptos={conceptos} />
+		</div>
+	</div>
+</article>
+
+<style>
+	/* Lomo del cuaderno con el color del bootcamp. */
+	.entrada::before {
+		content: '';
+		position: absolute;
+		inset: -1px auto -1px -1px;
+		width: 6px;
+		border-radius: 0.5rem 0 0 0.5rem;
+		background: var(--accent);
+	}
+
+	/* El enlace cubre la card: el foco se dibuja en la card entera. */
+	.entrada:has(a:focus-visible) {
+		outline: 2px solid var(--accent-ink);
+		outline-offset: 3px;
+	}
+</style>

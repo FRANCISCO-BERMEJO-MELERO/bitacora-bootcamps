@@ -1,0 +1,40 @@
+---
+export interface Miga {
+	texto: string;
+	href?: string;
+}
+
+interface Props {
+	migas: Miga[];
+}
+
+const { migas } = Astro.props;
+---
+
+<nav aria-label="Migas de pan" class="text-sm text-ink-soft">
+	<ol class="flex flex-wrap items-center gap-x-2 gap-y-1">
+		{
+			migas.map((miga, i) => {
+				const esUltima = i === migas.length - 1;
+				return (
+					<li class="flex items-center gap-2">
+						{i > 0 && (
+							<span aria-hidden="true" class="text-rule">
+								/
+							</span>
+						)}
+						{miga.href && !esUltima ? (
+							<a href={miga.href} class="enlace">
+								{miga.texto}
+							</a>
+						) : (
+							<span aria-current={esUltima ? 'page' : undefined} class="font-medium text-ink">
+								{miga.texto}
+							</span>
+						)}
+					</li>
+				);
+			})
+		}
+	</ol>
+</nav>

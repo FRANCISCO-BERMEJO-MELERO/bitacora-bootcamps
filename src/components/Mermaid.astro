@@ -1,0 +1,86 @@
+---
+// Renderiza en cliente los bloques ```mermaid del apunte. Mermaid solo se descarga
+// si la página tiene algún diagrama, y se vuelve a dibujar al cambiar el tema del sistema.
+---
+
+<script>
+	type Diagrama = { fuente: string; destino: HTMLElement; pre: HTMLElement };
+
+	const bloques = [...document.querySelectorAll<HTMLElement>('pre > code.language-mermaid')];
+
+	if (bloques.length > 0) {
+		void iniciar(bloques);
+	}
+
+	/** Colores del diagrama sacados de los tokens CSS, para que siga el tema de la web. */
+	function variablesDeTema() {
+		const css = getComputedStyle(document.documentElement);
+		const token = (nombre: string) => css.getPropertyValue(nombre).trim();
+		const oscuro = matchMedia('(prefers-color-scheme: dark)').matches;
+		return {
+			darkMode: oscuro,
+			background: token('--sheet'),
+			primaryColor: token('--paper'),
+			primaryBorderColor: token('--accent'),
+			primaryTextColor: token('--ink'),
+			secondaryColor: token('--sheet'),
+			tertiaryColor: token('--paper'),
+			lineColor: token('--ink-soft'),
+			textColor: token('--ink'),
+			edgeLabelBackground: token('--sheet'),
+			fontFamily: token('--fuente-ui') || 'system-ui, sans-serif',
+			fontSize: '15px',
+		};
+	}
+
+	async function iniciar(codigos: HTMLElement[]) {
+		const { default: mermaid } = await import('mermaid');
+
+		const diagramas: Diagrama[] = codigos.map((code) => {
+			const pre = code.parentElement as HTMLElement;
+			const destino = document.createElement('div');
+			destino.className = 'mermaid-diagrama';
+			destino.hidden = true;
+			pre.after(destino);
+			return { fuente: code.textContent ?? '', destino, pre };
+		});
+
+		let ronda = 0;
+
+		async function dibujar() {
+			ronda += 1;
+			mermaid.initialize({
+				startOnLoad: false,
+				securityLevel: 'strict',
+				theme: 'base',
+				themeVariables: variablesDeTema(),
+			});
+
+			for (const [i, d] of diagramas.entries()) {
+				try {
+					const { svg } = await mermaid.render(`mermaid-${ronda}-${i}`, d.fuente);
+					d.destino.innerHTML = svg;
+					// Ancho natural del diagrama, para que en móvil no se encoja hasta ser ilegible.
+					const ancho = d.destino.querySelector('svg')?.viewBox.baseVal.width;
+					if (ancho) d.destino.style.setProperty('--ancho-natural', `${Math.ceil(ancho)}px`);
+					d.destino.hidden = false;
+					d.pre.hidden = true;
+				} catch (error) {
+					// Si falla, se deja el código fuente visible con un aviso.
+					d.destino.hidden = true;
+					d.pre.hidden = false;
+					if (!d.destino.nextElementSibling?.classList.contains('mermaid-error')) {
+						const aviso = document.createElement('p');
+						aviso.className = 'mermaid-error';
+						aviso.textContent = 'No se ha podido dibujar este diagrama; se muestra su código.';
+						d.destino.after(aviso);
+					}
+					console.error(error);
+				}
+			}
+		}
+
+		await dibujar();
+		matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => void dibujar());
+	}
+</script>
