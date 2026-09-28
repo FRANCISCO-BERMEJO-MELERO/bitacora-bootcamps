@@ -1,0 +1,134 @@
+---
+import type { GetStaticPaths } from 'astro';
+import { getEntry, render } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import Chips from '../../components/Chips.astro';
+import Indice from '../../components/Indice.astro';
+import Mermaid from '../../components/Mermaid.astro';
+import {
+	dosDigitos,
+	formatearFecha,
+	getApuntes,
+	getApuntesDe,
+	hrefDe,
+	isoFecha,
+	slugDe,
+	vecinos,
+	type Apunte,
+} from '../../lib/apuntes';
+
+export const getStaticPaths = (async () => {
+	const apuntes = await getApuntes();
+	return apuntes.map((apunte) => ({
+		params: { bootcamp: apunte.data.bootcamp.id, slug: slugDe(apunte) },
+		props: { apunte },
+	}));
+}) satisfies GetStaticPaths;
+
+interface Props {
+	apunte: Apunte;
+}
+
+const { apunte } = Astro.props;
+const { titulo, tema, orden, fecha, resumen, conceptos, idiomaOriginal } = apunte.data;
+
+const bootcamp = await getEntry(apunte.data.bootcamp);
+if (!bootcamp) {
+	throw new Error(`El apunte «${apunte.id}» apunta a un bootcamp que no existe: ${apunte.data.bootcamp.id}`);
+}
+
+const { Content, headings } = await render(apunte);
+const { anterior, siguiente } = vecinos(apunte, await getApuntesDe(bootcamp.id));
+
+const temaSlug = slugDe(apunte).split('/')[0];
+const urlBootcamp = `/${bootcamp.id}/`;
+
+const idiomas: Record<string, string> = {
+	en: 'Traducido del inglés',
+	es: 'Escrito en español',
+	fr: 'Traducido del francés',
+	pt: 'Traducido del portugués',
+	de: 'Traducido del alemán',
+};
+const origen = idiomas[idiomaOriginal] ?? `Idioma original: ${idiomaOriginal}`;
+---
+
+<Base titulo={titulo} descripcion={resumen} acento={bootcamp.data.color}>
+	<Breadcrumbs
+		migas={[
+			{ texto: 'Bitácora', href: '/' },
+			{ texto: bootcamp.data.nombre, href: urlBootcamp },
+			{ texto: tema, href: `${urlBootcamp}#${temaSlug}` },
+			{ texto: titulo },
+		]}
+	/>
+
+	<header class="mt-8 grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 sm:gap-x-6">
+		<span
+			class="cifras pt-1 text-4xl leading-none font-black tracking-tight text-accent-ink sm:text-6xl"
+			aria-hidden="true">{dosDigitos(orden)}</span
+		>
+		<div class="min-w-0">
+			<p class="text-sm font-semibold text-accent-ink">
+				<span class="sr-only">Apunte {orden} del tema </span>{tema}
+			</p>
+			<h1 class="mt-1 text-3xl leading-[1.05] font-black tracking-[-0.025em] text-balance sm:text-5xl">
+				{titulo}
+			</h1>
+		</div>
+		<div class="col-span-2 mt-6 max-w-[68ch] sm:col-start-2 sm:col-end-3">
+			<p class="font-lectura text-xl leading-relaxed text-ink-soft sm:text-[1.35rem]">{resumen}</p>
+			<div class="mt-5 flex flex-wrap items-center gap-x-5 gap-y-3 text-sm text-ink-soft">
+				<time datetime={isoFecha(fecha)} class="cifras">{formatearFecha(fecha)}</time>
+				<span>{origen}</span>
+			</div>
+			<div class="mt-4">
+				<Chips conceptos={conceptos} etiqueta="Conceptos clave" />
+			</div>
+		</div>
+	</header>
+
+	<div class="mt-10 border-t border-ink/80 pt-8 lg:grid lg:grid-cols-[minmax(0,1fr)_15rem] lg:gap-14">
+		<aside class="order-2 lg:sticky lg:top-6 lg:max-h-[calc(100dvh-3rem)] lg:self-start lg:overflow-y-auto">
+			<Indice headings={headings} />
+		</aside>
+
+		<article class="prose mt-8 lg:mt-0">
+			<Content />
+		</article>
+	</div>
+
+	{
+		(anterior || siguiente) && (
+			<nav aria-label="Otros apuntes del tema" class="mt-16 grid gap-4 border-t border-rule pt-8 sm:grid-cols-2">
+				{anterior && (
+					<a
+						href={hrefDe(anterior)}
+						rel="prev"
+						class="group rounded-lg border border-rule bg-sheet p-4 transition-colors hover:border-accent"
+					>
+						<span class="block text-sm text-ink-soft">Anterior</span>
+						<span class="mt-1 block font-bold text-balance text-ink">
+							<span class="cifras text-accent-ink">{dosDigitos(anterior.data.orden)}</span> {anterior.data.titulo}
+						</span>
+					</a>
+				)}
+				{siguiente && (
+					<a
+						href={hrefDe(siguiente)}
+						rel="next"
+						class="group rounded-lg border border-rule bg-sheet p-4 text-right transition-colors hover:border-accent sm:col-start-2"
+					>
+						<span class="block text-sm text-ink-soft">Siguiente</span>
+						<span class="mt-1 block font-bold text-balance text-ink">
+							<span class="cifras text-accent-ink">{dosDigitos(siguiente.data.orden)}</span> {siguiente.data.titulo}
+						</span>
+					</a>
+				)}
+			</nav>
+		)
+	}
+
+	<Mermaid />
+</Base>

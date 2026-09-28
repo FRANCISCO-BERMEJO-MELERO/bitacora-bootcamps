@@ -1,0 +1,160 @@
+---
+import Base from '../layouts/Base.astro';
+import EstadoBootcamp from '../components/EstadoBootcamp.astro';
+import {
+	agruparPorTema,
+	formatearFecha,
+	getApuntes,
+	getBootcamps,
+	hrefDe,
+	isoFecha,
+	plural,
+	type Apunte,
+} from '../lib/apuntes';
+
+const bootcamps = await getBootcamps();
+const apuntes = await getApuntes();
+
+// Más reciente primero; a igual fecha, el de mayor orden.
+const porFecha = (a: Apunte, b: Apunte) =>
+	b.data.fecha.getTime() - a.data.fecha.getTime() || b.data.orden - a.data.orden;
+
+const resumenes = bootcamps.map((bootcamp) => {
+	const suyos = apuntes.filter((a) => a.data.bootcamp.id === bootcamp.id);
+	return {
+		bootcamp,
+		apuntes: suyos.length,
+		temas: agruparPorTema(suyos).length,
+		ultimo: [...suyos].sort(porFecha)[0],
+	};
+});
+
+const totalTemas = resumenes.reduce((n, r) => n + r.temas, 0);
+const ultimaEntrada = [...apuntes].sort(porFecha)[0];
+
+// Cajetín de la portada: el bloque de datos de un plano técnico.
+const cajetin = [
+	{ etiqueta: 'Bootcamps', valor: String(bootcamps.length) },
+	{ etiqueta: 'Temas', valor: String(totalTemas) },
+	{ etiqueta: 'Apuntes', valor: String(apuntes.length) },
+	{
+		etiqueta: 'Última entrada',
+		valor: ultimaEntrada ? formatearFecha(ultimaEntrada.data.fecha) : 'Ninguna todavía',
+	},
+];
+---
+
+<Base>
+	<header class="pt-6 sm:pt-12">
+		<h1
+			class="text-[clamp(3.6rem,15vw,9.5rem)] leading-[0.85] font-black tracking-[-0.045em] text-ink"
+		>
+			Bitácora
+		</h1>
+		<p class="mt-5 max-w-[34ch] font-lectura text-xl leading-snug text-ink-soft sm:text-2xl">
+			Apuntes traducidos y resumidos de los bootcamps que voy haciendo.
+		</p>
+
+		<dl
+			class="cajetin mt-10 grid grid-cols-3 overflow-hidden rounded-lg border border-ink/80 bg-sheet sm:grid-cols-[repeat(3,minmax(0,1fr))_minmax(0,1.6fr)]"
+		>
+			{
+				cajetin.map(({ etiqueta, valor }) => (
+					<div class="flex flex-col gap-1 px-4 py-3">
+						<dt class="text-xs font-medium text-ink-soft">{etiqueta}</dt>
+						<dd class="cifras text-lg font-bold text-ink">{valor}</dd>
+					</div>
+				))
+			}
+		</dl>
+	</header>
+
+	<section aria-labelledby="titulo-bootcamps" class="mt-16">
+		<h2 id="titulo-bootcamps" class="text-2xl font-extrabold tracking-tight">Bootcamps</h2>
+
+		{
+			resumenes.length === 0 ? (
+				<p class="mt-4 max-w-prose text-ink-soft">
+					Aún no hay bootcamps. Crea un <code>.json</code> en <code>src/content/bootcamps/</code> con
+					nombre, plataforma, estado y color.
+				</p>
+			) : (
+				<ul class="mt-6 grid gap-5 md:grid-cols-2">
+					{resumenes.map(({ bootcamp, apuntes, temas, ultimo }) => (
+						<li
+							class="bootcamp relative flex flex-col rounded-lg border border-rule bg-sheet p-6 pl-8 transition-colors hover:border-accent"
+							style={`--accent: ${bootcamp.data.color}`}
+						>
+							<div class="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+								<div>
+									<h3 class="text-2xl leading-tight font-extrabold tracking-tight">
+										<a
+											href={`/${bootcamp.id}/`}
+											class="outline-none after:absolute after:inset-0 after:rounded-lg"
+										>
+											{bootcamp.data.nombre}
+										</a>
+									</h3>
+									<p class="mt-1 text-ink-soft">{bootcamp.data.plataforma}</p>
+								</div>
+								<EstadoBootcamp estado={bootcamp.data.estado} />
+							</div>
+
+							<p class="cifras mt-6 border-t border-rule pt-4 text-sm font-semibold text-ink">
+								{plural(apuntes, 'apunte')} en {plural(temas, 'tema')}
+							</p>
+							{ultimo ? (
+								<p class="mt-1 text-sm text-ink-soft">
+									Último: <a href={hrefDe(ultimo)} class="enlace relative z-10 text-ink">{ultimo.data.titulo}</a>,{' '}
+									<time datetime={isoFecha(ultimo.data.fecha)}>{formatearFecha(ultimo.data.fecha)}</time>
+								</p>
+							) : (
+								<p class="mt-1 text-sm text-ink-soft">Sin apuntes todavía.</p>
+							)}
+						</li>
+					))}
+				</ul>
+			)
+		}
+	</section>
+</Base>
+
+<style>
+	/* Líneas interiores del cajetín. */
+	.cajetin > div {
+		border-color: color-mix(in oklab, var(--ink) 80%, transparent);
+	}
+	/* Móvil: tres cifras arriba y la fecha en una fila completa debajo. */
+	.cajetin > div:nth-child(-n + 2) {
+		border-right-width: 1px;
+	}
+	.cajetin > div:last-child {
+		grid-column: 1 / -1;
+		border-top-width: 1px;
+	}
+
+	@media (min-width: 40rem) {
+		.cajetin > div {
+			border-right-width: 1px;
+		}
+		.cajetin > div:last-child {
+			grid-column: auto;
+			border-top-width: 0;
+			border-right-width: 0;
+		}
+	}
+
+	.bootcamp::before {
+		content: '';
+		position: absolute;
+		inset: -1px auto -1px -1px;
+		width: 8px;
+		border-radius: 0.5rem 0 0 0.5rem;
+		background: var(--accent);
+	}
+
+	.bootcamp:has(a:focus-visible) {
+		outline: 2px solid var(--accent-ink);
+		outline-offset: 3px;
+	}
+</style>
