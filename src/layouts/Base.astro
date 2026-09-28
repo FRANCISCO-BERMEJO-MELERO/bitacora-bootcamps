@@ -1,0 +1,71 @@
+---
+import { Font } from 'astro:assets';
+import '../styles/global.css';
+
+interface Props {
+	/** Título de la pestaña; se le añade « | Bitácora» salvo en la portada. */
+	titulo?: string;
+	descripcion?: string;
+	/** Color de acento del bootcamp (hex). */
+	acento?: string;
+}
+
+const {
+	titulo,
+	descripcion = 'Apuntes traducidos y resumidos de los bootcamps que voy haciendo.',
+	acento,
+} = Astro.props;
+
+const tituloCompleto = titulo ? `${titulo} | Bitácora` : 'Bitácora';
+const esPortada = Astro.url.pathname === '/';
+---
+
+<!doctype html>
+<html lang="es" style={acento ? `--accent: ${acento}` : undefined}>
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="description" content={descripcion} />
+		<meta name="generator" content={Astro.generator} />
+		<meta name="theme-color" content="#eef2f6" media="(prefers-color-scheme: light)" />
+		<meta name="theme-color" content="#0f1928" media="(prefers-color-scheme: dark)" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<title>{tituloCompleto}</title>
+		<Font cssVariable="--fuente-ui" preload />
+		<Font cssVariable="--fuente-lectura" preload />
+		<Font cssVariable="--fuente-codigo" />
+	</head>
+	<body class="flex flex-col">
+		<a
+			href="#contenido"
+			class="sr-only rounded-md bg-ink px-4 py-2 text-sm font-semibold text-paper focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50"
+		>
+			Saltar al contenido
+		</a>
+
+		{
+			!esPortada && (
+				<header class="mx-auto w-full max-w-6xl px-4 pt-5 sm:px-6">
+					<a
+						href="/"
+						class="inline-flex items-center gap-2 rounded text-[0.95rem] font-extrabold tracking-tight text-ink"
+					>
+						<img src="/favicon.svg" alt="" width="22" height="22" />
+						Bitácora
+					</a>
+				</header>
+			)
+		}
+
+		<main id="contenido" class="mx-auto w-full max-w-6xl flex-1 px-4 pt-8 pb-20 sm:px-6">
+			<slot />
+		</main>
+
+		<footer class="mx-auto w-full max-w-6xl px-4 sm:px-6">
+			<p class="border-t border-rule py-6 text-sm text-ink-soft">
+				Apuntes personales. El material original pertenece a cada curso; aquí solo hay mis
+				resúmenes.
+			</p>
+		</footer>
+	</body>
+</html>
