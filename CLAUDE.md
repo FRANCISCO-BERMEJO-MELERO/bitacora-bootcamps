@@ -121,7 +121,7 @@ referencias rotas.
   explica el plan y espera confirmación.
 - No instales dependencias sin preguntar.
 - Cambios pequeños y enfocados; no refactorices lo que no se ha pedido.
-- Antes de dar algo por terminado: `npm run build` sin errores ni warnings nuevos.
+- Antes de dar algo por terminado: `pnpm build` sin errores ni warnings nuevos.
 - Si algo no está claro, pregunta en vez de suponer.
 - Sé crítico: si una petición mía es mala idea o tiene una opción mejor, dilo.
 
@@ -147,7 +147,7 @@ Se implementará como comando/skill de Claude Code (`/apunte`) que reciba:
 2. Calcule el siguiente `orden` dentro del tema.
 3. Genere el apunte siguiendo **exactamente** el formato de este archivo.
 4. Si el bootcamp no existe, pregunte sus datos y cree su `.json`.
-5. Ejecute `npm run build` para validar el esquema.
+5. Ejecute `pnpm build` para validar el esquema.
 6. Proponga el mensaje de commit, sin hacerlo.
 
 No empezar esta fase hasta que la web esté terminada.
