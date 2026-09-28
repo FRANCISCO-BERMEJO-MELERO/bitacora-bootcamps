@@ -8,8 +8,8 @@ Web personal (Astro) donde centralizo los apuntes de todos los bootcamps que hag
 Yo pego los apuntes originales (normalmente en inglés) y Claude los **traduce, resume y
 representa** como un apunte en Markdown con una card en el bootcamp correspondiente.
 
-Fase actual: **1 — construir la web.**
-Fase siguiente: **2 — comando/skill para generar apuntes** (ver sección al final).
+Fase actual: **2 — generar apuntes con `/apunte`** (ver sección al final).
+Fase 1 (la web) terminada.
 
 ## Idioma y tono
 
@@ -138,16 +138,40 @@ referencias rotas.
 - `/originales` está en `.gitignore` si el repo es público (el material de los
   cursos tiene derechos de autor; lo que se publica son mis apuntes, no el original).
 
-## Fase 2 — Generador de apuntes (pendiente)
+## Fase 2 — Generador de apuntes (`/apunte`)
 
-Se implementará como comando/skill de Claude Code (`/apunte`) que reciba:
-`bootcamp`, `tema`, `titulo` y el texto original, y que:
+Skill de proyecto en `.claude/skills/apunte/`:
 
-1. Guarde el original en `originales/<bootcamp>/<tema>/<nn>-<titulo>.md`.
-2. Calcule el siguiente `orden` dentro del tema.
-3. Genere el apunte siguiendo **exactamente** el formato de este archivo.
-4. Si el bootcamp no existe, pregunte sus datos y cree su `.json`.
-5. Ejecute `pnpm build` para validar el esquema.
-6. Proponga el mensaje de commit, sin hacerlo.
+- `SKILL.md` — instrucciones paso a paso.
+- `plantilla.md` — plantilla del apunte; la skill la lee siempre antes de escribir.
+- `scripts/preparar.mjs` — slugs, siguiente `orden`, rutas y detección de duplicados.
+- `scripts/copiar-original.mjs` — copia el original byte a byte.
 
-No empezar esta fase hasta que la web esté terminada.
+### Uso
+
+Texto pegado debajo:
+
+```
+/apunte alchemy-ethereum | Estructuras de datos | Patricia Merkle Tries
+<texto original>
+```
+
+O con un archivo (para originales largos):
+
+```
+/apunte alchemy-ethereum | Estructuras de datos | Patricia Merkle Tries @originales/pmt.txt
+```
+
+### Qué hace
+
+1. Valida la entrada: si falta algo, lo pide y para. Si el bootcamp no existe, pide sus
+   datos y crea su `.json`. Si ya hay un apunte con el mismo título en el tema, pregunta
+   si sobrescribirlo o crear otro.
+2. Calcula el `orden` (máximo del tema + 1). Si el tema ya tiene carpeta, la reutiliza
+   aunque su nombre no sea el slug exacto.
+3. Guarda el original sin tocar en `originales/<bootcamp>/<tema>/<nn>-<titulo-slug>.md`.
+4. Genera el apunte en `src/content/apuntes/<bootcamp>/<tema>/<nn>-<titulo-slug>.md`
+   con el formato de este archivo.
+5. Ejecuta `pnpm build`; si falla por el apunte, corrige el apunte (nunca el esquema).
+6. Resume el resultado (ruta, orden, conceptos, imágenes sustituidas u omitidas) y
+   propone el commit `content(<bootcamp>): añade apunte de <título>`, sin hacerlo.
